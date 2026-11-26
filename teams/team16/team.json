@@ -1,0 +1,17 @@
+{
+  "id": "team16",
+  "title": "تله‌کابین",
+  "title_en": "Cable Car Station",
+  "members": [
+    {
+      "name": "فاطمه تیرانداز",
+      "student_id": "40231058",
+      "github": "fatemetz"
+    },
+    {
+      "name": "فاطمه موجانی",
+      "student_id": "40131049",
+      "github": "Fatemeh-Mj"
+    }
+  ]
+}
