@@ -1,91 +1,266 @@
-// team16 - Cable Car Station
-//
-// Your zone. Start here and make it yours; the comments in sdk/cpp/citylab/
-// (Zone.h, Context.h, Shapes.h, Props.h) explain every part of the API.
-// Coordinates are plot-local metres:
-// x from -40 to 40 across the frontage (-80 to 80 on a double plot), z from
-// -50 (back) to +50 (the gate on the street), y up from 0 to 40.
-//
-//     python3 tools/citylab.py run team16      build and walk straight to your plot
-//     python3 tools/citylab.py check team16    the same checks the graders run
 
 #include <citylab/CityLab.h>
+#include <cmath>
 
 namespace team16 {
-
 using namespace citylab;
 
 class MyZone : public Zone {
 public:
     void init(Context& ctx) override {
-        // Everything that never moves goes into a display list, built once.
         scenery_ = glGenLists(1);
+
         glNewList(scenery_, GL_COMPILE);
         drawScenery(ctx.plot());
         glEndList();
 
-        // What the visitor cannot walk through.
-        ctx.addCollider({-5.0f, 0.0f, -14.0f}, {5.0f, 4.0f, -6.0f});
-        ctx.log("hello from " + ctx.teamId() + " on plot " + ctx.plot().id);
+        ctx.log("Cable car station layout initialized on plot " +
+                ctx.plot().id);
     }
 
-    void update(const Frame& frame) override {
-        // Move things with frame.dt so the speed is the same on every computer.
-        if (spinning_) angle_ += 45.0f * frame.dt;  // degrees per second
+    void update(const Frame&) override {
+        // Static layout for now.
     }
 
     void draw(const Context&) const override {
-        glCallList(scenery_);
-
-        // A weather vane on the roof that turns.
-        glPushMatrix();
-        glTranslatef(0.0f, 6.6f, -10.0f);
-        glRotatef(angle_, 0.0f, 1.0f, 0.0f);
-        glColor3f(0.85f, 0.70f, 0.25f);
-        shapes::box(0.1f, 0.1f, 1.6f);
-        glTranslatef(0.0f, 0.0f, 0.8f);
-        shapes::cone(0.2f, 0.5f, 12);
-        glPopMatrix();
+        if (scenery_ != 0) {
+            glCallList(scenery_);
+        }
     }
 
-    void reset() override { angle_ = 0.0f; }
+    void reset() override {}
 
-    void onKey(int key) override {
-        if (key == 'v') spinning_ = !spinning_;  // V stops and starts the vane
-    }
+    void onKey(int) override {}
 
 private:
+
+    // Draw a horizontal rectangular surface.
+    void drawRect(float x, float z,
+                  float width, float depth,
+                  float y = 0.02f) const {
+        glPushMatrix();
+        glTranslatef(x, y, z);
+        shapes::plane(width, depth);
+        glPopMatrix();
+    }
+
+    // Draw a curved pedestrian path (circular arc).
+void drawCurvedPath(float cx, float cz,
+                    float radius, float width,
+                    float startAngle, float endAngle) const {
+
+    const int segments = 24;
+
+    glBegin(GL_QUAD_STRIP);
+
+    for (int i = 0; i <= segments; ++i) {
+        float t = static_cast<float>(i) / segments;
+        float angle = (startAngle +
+                       t * (endAngle - startAngle))
+                      * 3.14159265f / 180.0f;
+
+        float cosA = cosf(angle);
+        float sinA = sinf(angle);
+
+        float outerRadius = radius + width / 2.0f;
+        float innerRadius = radius - width / 2.0f;
+
+        glVertex3f(
+            cx + outerRadius * cosA,
+            0.045f,
+            cz + outerRadius * sinA
+        );
+
+        glVertex3f(
+            cx + innerRadius * cosA,
+            0.045f,
+            cz + innerRadius * sinA
+        );
+    }
+
+    glEnd();
+}
+
+    // Draw all building footprints.
+    void drawStructures() const {
+
+        // ---------------------------------
+        // LOWER STATION
+        // Center: (0, 23)
+        // Size: 20 x 13
+        // ---------------------------------
+        glColor3f(0.48f, 0.51f, 0.56f);
+        drawRect(0.0f, 23.0f, 20.0f, 13.0f, 0.05f);
+
+        // Lower station - right: Control and maintenance
+        // Center: (18, 23)
+        // Size: 12 x 10
+        glColor3f(0.25f, 0.43f, 0.62f);
+        drawRect(18.0f, 23.0f, 12.0f, 10.0f, 0.06f);
+
+        // Lower station - left: Restrooms
+        // Center: (-17, 23)
+        // Size: 8 x 8
+        glColor3f(0.35f, 0.59f, 0.68f);
+        drawRect(-17.0f, 23.0f, 8.0f, 8.0f, 0.06f);
+
+
+        // ---------------------------------
+        // UPPER STATION
+        // Center: (0, -30)
+        // Size: 20 x 13
+        // ---------------------------------
+        glColor3f(0.48f, 0.51f, 0.56f);
+        drawRect(0.0f, -30.0f, 20.0f, 13.0f, 0.05f);
+
+        // Upper station - left: Control and maintenance
+        // Center: (-18, -30)
+        // Size: 12 x 10
+        glColor3f(0.25f, 0.43f, 0.62f);
+        drawRect(-18.0f, -30.0f, 12.0f, 10.0f, 0.06f);
+
+        // Upper station - right: Restaurant
+        // Center: (18, -30)
+        // Size: 12 x 10
+        glColor3f(0.72f, 0.48f, 0.25f);
+        drawRect(18.0f, -30.0f, 12.0f, 10.0f, 0.06f);
+    }
+
+    // Draw tower base markers.
+    void drawTowerBases() const {
+        glColor3f(0.78f, 0.22f, 0.18f);
+
+        // Tower 1
+        drawRect(0.0f, 7.0f, 3.0f, 3.0f, 0.07f);
+
+        // Tower 2
+        drawRect(0.0f, -12.0f, 3.0f, 3.0f, 0.07f);
+    }
+
+    // Draw waiting area and entrance marker.
+    void drawPublicAreas() const {
+
+        // Waiting area
+        glColor3f(0.82f, 0.76f, 0.62f);
+        drawRect(0.0f, 37.0f, 24.0f, 10.0f, 0.03f);
+
+        // Entrance landmark marker
+        glColor3f(0.95f, 0.75f, 0.15f);
+        drawRect(12.0f, 42.0f, 3.0f, 3.0f, 0.07f);
+    }
+
+    // Draw pedestrian paths.
+    void drawPaths() const {
+
+    glColor3f(0.68f, 0.68f, 0.65f);
+
+    // =====================================
+    // 1. MAIN ENTRANCE PATH
+    // =====================================
+
+    // Entrance to waiting area
+    drawRect(0.0f, 43.0f, 4.0f, 14.0f, 0.04f);
+
+    // Waiting area to lower station
+    drawRect(0.0f, 30.75f, 3.0f, 3.5f, 0.04f);
+
+
+    // =====================================
+    // 2. LOWER STATION CONNECTIONS
+    // =====================================
+
+    // Lower station to right control building
+    drawRect(11.0f, 23.0f, 2.0f, 3.0f, 0.04f);
+
+    // Lower station to left restroom
+    drawRect(-11.5f, 23.0f, 3.0f, 2.0f, 0.04f);
+
+
+    // =====================================
+    // 3. UPPER STATION CONNECTIONS
+    // =====================================
+
+    // Upper station to left control building
+    drawRect(-11.0f, -30.0f, 2.0f, 3.0f, 0.04f);
+
+    // Upper station to right restaurant
+    drawRect(11.0f, -30.0f, 2.0f, 3.0f, 0.04f);
+
+
+    // =====================================
+    // 4. SIDE WALKWAYS
+    // =====================================
+
+    // Left perimeter walkway
+    drawRect(-30.0f, 2.5f, 2.0f, 65.0f, 0.04f);
+
+    // Right perimeter walkway
+    drawRect(30.0f, 2.5f, 2.0f, 65.0f, 0.04f);
+
+
+    // =====================================
+    // 5. WAITING AREA SIDE CONNECTIONS
+    // =====================================
+
+    // Horizontal connections
+    drawRect(-20.0f, 37.0f, 16.0f, 2.0f, 0.04f);
+    drawRect(20.0f, 37.0f, 16.0f, 2.0f, 0.04f);
+
+    // Curved corners
+    drawCurvedPath(-28.0f, 35.0f, 2.0f, 2.0f,
+                   90.0f, 180.0f);
+
+    drawCurvedPath(28.0f, 35.0f, 2.0f, 2.0f,
+                   90.0f, 0.0f);
+
+
+// =====================================
+// 6. UPPER STATION SIDE CONNECTIONS
+// =====================================
+
+// Left connection to upper control building
+drawRect(-26.5f, -30.0f, 5.0f, 2.0f, 0.04f);
+
+// Right connection to upper restaurant
+drawRect(26.5f, -30.0f, 5.0f, 2.0f, 0.04f);
+
+
+// =====================================
+// 7. CURVED UPPER CORNERS
+// =====================================
+
+// Upper-left curved corner
+drawCurvedPath(-28.0f, -28.0f, 2.0f, 2.0f,
+               180.0f, 270.0f);
+
+// Upper-right curved corner
+drawCurvedPath(28.0f, -28.0f, 2.0f, 2.0f,
+               270.0f, 360.0f);
+}
+
     void drawScenery(const PlotInfo& plot) const {
-        glColor3f(0.36f, 0.50f, 0.24f);  // lawn over the whole plot
-        glPushMatrix();
-        glTranslatef(0.0f, 0.01f, 0.0f);
-        shapes::plane(plot.width, plot.depth);
-        glPopMatrix();
 
-        glColor3f(0.70f, 0.64f, 0.55f);  // a path from the house to the gate
-        glPushMatrix();
-        glTranslatef(0.0f, 0.02f, 17.0f);
-        shapes::plane(3.0f, 46.0f);
-        glPopMatrix();
+        // Main terrain
+        glColor3f(0.58f, 0.66f, 0.48f);
+        drawRect(0.0f, 0.0f,
+                 plot.width, plot.depth, 0.01f);
 
-        glColor3f(0.92f, 0.85f, 0.70f);  // a small house: walls and a roof
-        glPushMatrix();
-        glTranslatef(0.0f, 2.0f, -10.0f);
-        shapes::box(10.0f, 4.0f, 8.0f);
-        glPopMatrix();
-        glColor3f(0.60f, 0.25f, 0.18f);
-        glPushMatrix();
-        glTranslatef(0.0f, 4.0f, -10.0f);
-        glRotatef(90.0f, 0.0f, 1.0f, 0.0f);
-        shapes::gableRoof(8.6f, 2.4f, 10.6f);
-        glPopMatrix();
+        // Public areas
+        drawPublicAreas();
+
+        // Buildings
+        drawStructures();
+
+        // Tower bases
+        drawTowerBases();
+
+        // Pedestrian paths
+        drawPaths();
     }
 
     GLuint scenery_ = 0;
-    float angle_ = 0.0f;
-    bool spinning_ = true;
 };
 
-}  // namespace team16
+} // namespace team16
 
 CITYLAB_REGISTER_ZONE(team16::MyZone);
